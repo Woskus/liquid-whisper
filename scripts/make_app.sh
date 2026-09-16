@@ -25,6 +25,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleVersion</key><string>1</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>NSHighResolutionCapable</key><true/>
+    <key>LSUIElement</key><true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Liquid Whisper nagrywa dyktando po przytrzymaniu hotkeya.</string>
 </dict>

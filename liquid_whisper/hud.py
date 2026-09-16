@@ -62,31 +62,55 @@ class Hud:
             pass  # wizualizacja poziomu jest kosmetyczna — nie zaśmiecamy loga
 
     def configure_overlay(self) -> None:
-        """Natywna konfiguracja okna HUD — wołać na wątku głównym.
+        """Natywna konfiguracja HUD — wołać na wątku głównym.
 
-        Click-through (dyktujemy do innej aplikacji), poziom nad oknami
-        fullscreen i dołączanie do każdej przestrzeni oraz wyśrodkowanie.
+        Okno pywebview jest tworzone jako titled (frameless = ukryta belka),
+        a macOS klasyfikuje okna według stanu z chwili narodzin i takich nie
+        wpuszcza na cudze przestrzenie fullscreen (isOnActiveSpace=False mimo
+        CanJoinAllSpaces; późniejsza zmiana styleMask nic nie daje). Dlatego
+        przenosimy contentView (z WKWebView) do świeżego, od urodzenia
+        borderless NSPanelu, a okno pywebview chowamy — evaluate_js dalej
+        działa, bo rozmawia z WKWebView, nie z oknem.
         """
         try:
             import AppKit
             from AppKit import NSApplication
 
+            # aplikacja-agent (jak Spotlight): bez ikony w Docku i ⌘Tab — okna
+            # zwykłych aplikacji nie pokazują się nad cudzym fullscreenem
+            NSApplication.sharedApplication().setActivationPolicy_(
+                AppKit.NSApplicationActivationPolicyAccessory
+            )
             for win in NSApplication.sharedApplication().windows():
                 if win.title() != "Liquid Whisper":
                     continue  # okna słowniczka/ustawień mają zostać zwykłymi oknami
-                self._nswindow = win
-                win.setIgnoresMouseEvents_(True)
-                # poziom wygaszacza — ponad oknami aplikacji fullscreen;
-                # CanJoinAllSpaces + FullScreenAuxiliary: HUD wchodzi też na
-                # przestrzenie fullscreenowe jako okno pomocnicze
-                win.setLevel_(getattr(AppKit, "NSScreenSaverWindowLevel", 1000))
-                win.setCollectionBehavior_(
+                frame = win.frame()
+                panel = AppKit.NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
+                    (frame.origin, frame.size),
+                    AppKit.NSWindowStyleMaskBorderless
+                    | AppKit.NSWindowStyleMaskNonactivatingPanel,
+                    AppKit.NSBackingStoreBuffered,
+                    False,
+                )
+                panel.setReleasedWhenClosed_(False)
+                panel.setOpaque_(False)
+                panel.setBackgroundColor_(AppKit.NSColor.clearColor())
+                panel.setHasShadow_(False)
+                panel.setIgnoresMouseEvents_(True)
+                # poziom wygaszacza — ponad oknami fullscreen; CanJoinAllSpaces
+                # + FullScreenAuxiliary: panel wchodzi na każdą przestrzeń
+                panel.setLevel_(getattr(AppKit, "NSScreenSaverWindowLevel", 1000))
+                panel.setCollectionBehavior_(
                     AppKit.NSWindowCollectionBehaviorCanJoinAllSpaces
                     | AppKit.NSWindowCollectionBehaviorStationary
                     | AppKit.NSWindowCollectionBehaviorIgnoresCycle
                     | AppKit.NSWindowCollectionBehaviorFullScreenAuxiliary
                 )
-                self._recenter(win)
+                panel.setContentView_(win.contentView())
+                win.orderOut_(None)
+                panel.orderFrontRegardless()
+                self._nswindow = panel
+                self._recenter(panel)
         except Exception:
             log.exception("nie udało się skonfigurować okna HUD")
 
