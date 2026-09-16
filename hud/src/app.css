@@ -10,40 +10,37 @@
 .hud-root.hidden { opacity: 0; }
 .hud-root.visible { opacity: 1; }
 
-.hud-pill {
+.hud-capsule {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 22px;
-  border-radius: 22px;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 15px;
   background: rgba(12, 12, 16, 0.82);
-  color: #f2f2f5;
-  font-family: -apple-system, 'SF Pro Text', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  user-select: none;
 }
 
-.hud-indicator { display: flex; width: 14px; height: 14px; align-items: center; justify-content: center; }
+.bar {
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffffff, #9aa4b8);
+  transition: height 0.09s ease;
+}
 
-.dot-pulse {
-  width: 10px;
-  height: 10px;
+.hud-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: #ff4d4d;
-  animation: pulse 1.1s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.65); opacity: 0.55; }
+  background: rgba(12, 12, 16, 0.82);
 }
 
 .spinner {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-top-color: #ffffff;

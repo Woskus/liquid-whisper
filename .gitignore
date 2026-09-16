@@ -4,6 +4,7 @@ __pycache__/
 .DS_Store
 recordings/
 Liquid Whisper.app/
+suggestions.json
 hud/node_modules/
 hud/dist/
 *.log

@@ -47,6 +47,18 @@ cd hud && npm install && npm run build && cd ..
 
 Konfiguracja (hotkey, modele, słowniczek terminów): [config.toml](config.toml).
 
+## Pasek menu i słowniczek
+
+Aplikacja pokazuje ikonę kropli w pasku menu. Menu → **Słowniczek…** otwiera okienko z:
+
+- **Propozycjami z dyktand** — pipeline porównuje surowy transkrypt z oczyszczonym
+  i zbiera pary „usłyszane → poprawione"; jednym kliknięciem akceptujesz je do
+  słowniczka (✓) albo odrzucasz (✕). Stan propozycji: `suggestions.json`.
+- **Poprawkami** (usłyszane → poprawne) i **terminami** — edytowalne ręcznie,
+  zapisywane w `config.toml`, używane w prompcie cleanupu od następnego dyktanda.
+
+Menu → **Zakończ Liquid Whisper** zamyka aplikację.
+
 ## Uprawnienia macOS (troubleshooting)
 
 Uprawnienia nadaje się w System Settings → Privacy & Security temu, co uruchamia

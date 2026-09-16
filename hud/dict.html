@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<title>Słowniczek</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 18px 20px 24px;
+    background: #101014; color: #e8e8ee;
+    font: 13px/1.5 -apple-system, 'SF Pro Text', sans-serif;
+    user-select: none;
+  }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+       color: #8a8a96; margin: 22px 0 8px; }
+  h2:first-child { margin-top: 0; }
+  .empty { color: #55555e; font-style: italic; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+         background: #1a1a20; border-radius: 8px; margin-bottom: 6px; }
+  .row .wrong { color: #ff8a80; }
+  .row .arrow { color: #55555e; }
+  .row .correct { color: #a5d6a7; }
+  .row .count { color: #55555e; font-size: 11px; margin-left: auto; }
+  .row .grow { flex: 1; }
+  button {
+    border: 0; border-radius: 6px; padding: 4px 9px; cursor: pointer;
+    font-size: 12px; background: #2a2a32; color: #e8e8ee;
+  }
+  button:hover { background: #34343e; }
+  button.ok { background: #1d3a26; color: #a5d6a7; }
+  button.ok:hover { background: #26512f; }
+  button.no { background: #3a1d1d; color: #ff8a80; }
+  button.no:hover { background: #512626; }
+  button.x { background: transparent; color: #55555e; padding: 2px 6px; }
+  button.x:hover { color: #ff8a80; background: transparent; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 2px;
+          background: #1a1a20; border-radius: 999px; padding: 3px 4px 3px 12px; }
+  form.add { display: flex; gap: 6px; margin-top: 8px; }
+  input {
+    flex: 1; background: #1a1a20; border: 1px solid #2a2a32; border-radius: 6px;
+    color: #e8e8ee; padding: 5px 9px; font: inherit; outline: none;
+  }
+  input:focus { border-color: #46465a; }
+</style>
+</head>
+<body>
+  <h2>Propozycje z dyktand</h2>
+  <div id="suggestions"></div>
+
+  <h2>Poprawki (usłyszane → poprawne)</h2>
+  <div id="corrections"></div>
+  <form class="add" id="corr-form">
+    <input id="corr-wrong" placeholder="usłyszane, np. bac clock" />
+    <input id="corr-correct" placeholder="poprawne, np. backlog" />
+    <button type="submit">Dodaj</button>
+  </form>
+
+  <h2>Terminy</h2>
+  <div class="chips" id="terms"></div>
+  <form class="add" id="term-form">
+    <input id="term-input" placeholder="nowy termin, np. kubernetes" />
+    <button type="submit">Dodaj</button>
+  </form>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(data) {
+  const sug = $('suggestions');
+  sug.innerHTML = data.suggestions.length ? '' : '<div class="empty">Brak propozycji — pojawią się po kolejnych dyktandach.</div>';
+  for (const s of data.suggestions) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span class="wrong">${esc(s.wrong)}</span><span class="arrow">→</span>` +
+      `<span class="correct grow">${esc(s.correct)}</span><span class="count">×${s.count}</span>`;
+    const ok = document.createElement('button'); ok.className = 'ok'; ok.textContent = '✓ do słowniczka';
+    ok.onclick = () => call('accept_suggestion', s.wrong, s.correct);
+    const no = document.createElement('button'); no.className = 'no'; no.textContent = '✕';
+    no.onclick = () => call('reject_suggestion', s.wrong);
+    row.append(ok, no); sug.append(row);
+  }
+
+  const corr = $('corrections');
+  const entries = Object.entries(data.corrections);
+  corr.innerHTML = entries.length ? '' : '<div class="empty">Brak wpisów.</div>';
+  for (const [w, c] of entries) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span class="wrong">${esc(w)}</span><span class="arrow">→</span>` +
+      `<span class="correct grow">${esc(c)}</span>`;
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕';
+    x.onclick = () => call('remove_correction', w);
+    row.append(x); corr.append(row);
+  }
+
+  const terms = $('terms');
+  terms.innerHTML = data.terms.length ? '' : '<div class="empty">Brak terminów.</div>';
+  for (const t of data.terms) {
+    const chip = document.createElement('span');
+    chip.className = 'chip'; chip.textContent = t;
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕';
+    x.onclick = () => call('remove_term', t);
+    chip.append(x); terms.append(chip);
+  }
+}
+
+async function call(method, ...args) {
+  render(await window.pywebview.api[method](...args));
+}
+
+$('corr-form').onsubmit = (e) => {
+  e.preventDefault();
+  const w = $('corr-wrong').value.trim(), c = $('corr-correct').value.trim();
+  if (w && c) { call('add_correction', w, c); $('corr-wrong').value = ''; $('corr-correct').value = ''; }
+};
+$('term-form').onsubmit = (e) => {
+  e.preventDefault();
+  const t = $('term-input').value.trim();
+  if (t) { call('add_term', t); $('term-input').value = ''; }
+};
+
+window.addEventListener('pywebviewready', () => call('get_data'));
+</script>
+</body>
+</html>

@@ -18,9 +18,9 @@ log = logging.getLogger("liquid_whisper.hud")
 
 DIST_INDEX = Path(__file__).resolve().parent.parent / "hud" / "dist" / "index.html"
 
-WINDOW_W = 320
-WINDOW_H = 110
-MARGIN_BOTTOM = 70
+WINDOW_W = 180
+WINDOW_H = 70
+MARGIN_BOTTOM = 52
 
 
 class Hud:
@@ -50,6 +50,12 @@ class Hud:
         except Exception:
             log.exception("nie udało się zaktualizować stanu HUD")
 
+    def set_level(self, level: float) -> None:
+        try:
+            self.window.evaluate_js(f"window.setHudLevel && window.setHudLevel({level:.3f})")
+        except Exception:
+            pass  # wizualizacja poziomu jest kosmetyczna — nie zaśmiecamy loga
+
     def make_click_through(self) -> None:
         """Okno HUD nie może łapać myszy ani kraść fokusu — dyktujemy do innej aplikacji."""
         try:
@@ -62,11 +68,20 @@ class Hud:
 
 
 def run_with_hud(cfg: Config) -> None:
+    import Quartz
+
     hud = Hud()
-    app = App(cfg, on_state=hud.set_state)
+    app = App(cfg, on_state=hud.set_state, on_level=hud.set_level)
 
     def backend() -> None:
         hud.make_click_through()
+        # ikona w pasku menu musi powstać na wątku głównym
+        from .menubar import create_status_item
+
+        Quartz.CFRunLoopPerformBlock(
+            Quartz.CFRunLoopGetMain(), Quartz.kCFRunLoopCommonModes, lambda: create_status_item(app)
+        )
+        Quartz.CFRunLoopWakeUp(Quartz.CFRunLoopGetMain())
         check_permissions()
         log.info("ładowanie modelu ASR...")
         app.asr.warmup()

@@ -21,6 +21,8 @@ Popraw podany transkrypt według zasad:
 2. Popraw interpunkcję, wielkie litery i oczywiste literówki.
 3. Napraw fonetycznie zniekształcone angielskie terminy (np. „co derewie" → „code review", „bildzie" → „buildzie"). Pomocniczy słowniczek terminów, które mogły zostać zniekształcone:
 {dictionary}
+Znane błędne zapisy i ich poprawki (stosuj zawsze, z zachowaniem odmiany):
+{corrections}
 4. NIE zmieniaj sensu, stylu ani szyku wypowiedzi. NIE dodawaj niczego od siebie. NIE odpowiadaj na treść transkryptu.
 5. Zachowaj naturalną polską odmianę terminów (np. „w backlogu", „na buildzie").
 
@@ -32,12 +34,14 @@ class Cleaner:
         self,
         model: str,
         dictionary: list[str] | None = None,
+        corrections: dict[str, str] | None = None,
         min_words: int = 0,
         timeout_s: float = 10.0,
         keep_alive: str = "60m",
     ) -> None:
         self.model = model
         self.dictionary = dictionary or []
+        self.corrections = corrections or {}
         self.min_words = min_words
         self.timeout_s = timeout_s
         self.keep_alive = keep_alive
@@ -45,7 +49,12 @@ class Cleaner:
 
     def _system_prompt(self) -> str:
         terms = ", ".join(self.dictionary) if self.dictionary else "(brak)"
-        return SYSTEM_PROMPT.format(dictionary=terms)
+        pairs = (
+            "\n".join(f"- „{w}” → „{c}”" for w, c in self.corrections.items())
+            if self.corrections
+            else "(brak)"
+        )
+        return SYSTEM_PROMPT.format(dictionary=terms, corrections=pairs)
 
     def warmup(self) -> None:
         """Ładuje model do RAM na starcie, żeby pierwsze dyktando nie płaciło za load."""

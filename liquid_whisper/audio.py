@@ -20,6 +20,7 @@ class Recorder:
         self._chunks: list[np.ndarray] = []
         self._stream: sd.InputStream | None = None
         self._lock = threading.Lock()
+        self.level: float = 0.0  # RMS ostatniego bloku — dla wizualizacji w HUD
 
     def start(self) -> None:
         with self._lock:
@@ -47,6 +48,7 @@ class Recorder:
 
     def _callback(self, indata, frames, time_info, status) -> None:
         self._chunks.append(indata.copy())
+        self.level = float(np.sqrt((indata**2).mean()))
 
     def stop(self) -> np.ndarray:
         """Kończy nagrywanie i zwraca audio jako 1-D float32."""

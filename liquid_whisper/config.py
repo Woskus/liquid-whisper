@@ -22,6 +22,7 @@ class Config:
     cleanup_min_words: int = 0
     cleanup_timeout_s: float = 10.0
     dictionary: list[str] = field(default_factory=list)
+    corrections: dict[str, str] = field(default_factory=dict)
 
 
 def load_config(path: Path = CONFIG_PATH) -> Config:
@@ -38,4 +39,5 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         cleanup_min_words=raw.get("cleanup", {}).get("min_words", 0),
         cleanup_timeout_s=raw.get("cleanup", {}).get("timeout_s", 10.0),
         dictionary=raw.get("dictionary", {}).get("terms", []),
+        corrections=raw.get("dictionary", {}).get("corrections", {}),
     )
