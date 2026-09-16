@@ -56,10 +56,12 @@ class App:
         cfg: Config,
         on_state: Callable[[str], None] | None = None,
         on_level: Callable[[float], None] | None = None,
+        on_partial: Callable[[str], None] | None = None,
     ) -> None:
         self.cfg = cfg
         self.on_state = on_state or (lambda state: None)
         self.on_level = on_level
+        self.on_partial = on_partial
         self.recorder = Recorder(cfg.sample_rate, cfg.channels)
         self.asr = Transcriber(cfg.asr_model, cfg.language)
         self.cleaner = (
@@ -122,6 +124,30 @@ class App:
                 return
             time.sleep(0.08)
 
+    def _stream_pump(self) -> None:
+        """Streaming transkrypcji: co ~1 s transkrybuje dotychczasowe audio
+        i pokazuje częściowy tekst w HUD. Finalny wynik i tak liczy się od zera
+        po puszczeniu hotkeya — to tylko podgląd."""
+        import time
+
+        from .audio import has_speech
+
+        min_samples = int(self.cfg.sample_rate * 1.0)
+        while self.recorder.recording:
+            snap = self.recorder.snapshot()
+            if len(snap) >= min_samples and has_speech(snap, self.cfg.sample_rate):
+                try:
+                    partial = self.asr.transcribe(snap)
+                except Exception:
+                    log.exception("streaming transkrypcji przerwany")
+                    return
+                if self.recorder.recording and partial:
+                    try:
+                        self.on_partial(partial)
+                    except Exception:
+                        return
+            time.sleep(0.35)
+
     def _press_action(self) -> None:
         try:
             if not self._pressed:
@@ -130,6 +156,8 @@ class App:
                 self._set_state("recording")
                 if self.on_level is not None:
                     threading.Thread(target=self._level_pump, daemon=True).start()
+                if self.on_partial is not None:
+                    threading.Thread(target=self._stream_pump, daemon=True).start()
         except Exception:
             log.exception("nie udało się rozpocząć nagrywania")
             self._pressed = False

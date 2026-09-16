@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 
 import numpy as np
 
@@ -19,6 +20,8 @@ class Transcriber:
     ) -> None:
         self.model = model
         self.language = language
+        # streaming i finalna transkrypcja mogą się zazębić — jedna naraz
+        self._lock = threading.Lock()
 
     def warmup(self) -> None:
         """Pierwsze wywołanie ładuje wagi (i ściąga je przy pierwszym uruchomieniu) —
@@ -29,6 +32,10 @@ class Transcriber:
 
     def transcribe(self, audio: np.ndarray | str) -> str:
         """Audio: 1-D float32 16 kHz albo ścieżka do pliku."""
+        with self._lock:
+            return self._transcribe(audio)
+
+    def _transcribe(self, audio: np.ndarray | str) -> str:
         result = mlx_whisper.transcribe(
             audio,
             path_or_hf_repo=self.model,

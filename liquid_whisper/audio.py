@@ -64,6 +64,13 @@ class Recorder:
             self._chunks = []
         return audio.reshape(-1).astype(np.float32)
 
+    def snapshot(self) -> np.ndarray:
+        """Kopia dotychczas nagranego audio bez zatrzymywania nagrywania (streaming)."""
+        with self._lock:
+            if not self._chunks:
+                return np.zeros(0, dtype=np.float32)
+            return np.concatenate(self._chunks, axis=0).reshape(-1).astype(np.float32)
+
     @property
     def recording(self) -> bool:
         return self._stream is not None
