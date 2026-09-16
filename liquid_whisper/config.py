@@ -18,7 +18,7 @@ class Config:
     asr_model: str = "mlx-community/whisper-large-v3-turbo"
     language: str = "pl"
     cleanup_enabled: bool = True
-    cleanup_model: str = "qwen3:4b-instruct"
+    cleanup_model: str = "gemma3:4b"
     cleanup_min_words: int = 0
     cleanup_timeout_s: float = 10.0
     dictionary: list[str] = field(default_factory=list)
@@ -34,7 +34,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         asr_model=raw.get("asr", {}).get("model", "mlx-community/whisper-large-v3-turbo"),
         language=raw.get("asr", {}).get("language", "pl"),
         cleanup_enabled=raw.get("cleanup", {}).get("enabled", True),
-        cleanup_model=raw.get("cleanup", {}).get("model", "qwen3:4b-instruct"),
+        cleanup_model=raw.get("cleanup", {}).get("model", "gemma3:4b"),
         cleanup_min_words=raw.get("cleanup", {}).get("min_words", 0),
         cleanup_timeout_s=raw.get("cleanup", {}).get("timeout_s", 10.0),
         dictionary=raw.get("dictionary", {}).get("terms", []),

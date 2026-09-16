@@ -30,7 +30,7 @@ python3 -m venv .venv
     pyobjc-framework-Quartz pyobjc-framework-Cocoa pyobjc-framework-ApplicationServices
 
 # 3. Model cleanup (dobrany w etapie 3 — patrz config.toml [cleanup].model)
-ollama pull qwen3:4b-instruct
+ollama pull gemma3:4b
 
 # 4. Bundle HUD
 cd hud && npm install && npm run build && cd ..
