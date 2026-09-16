@@ -5,6 +5,7 @@ __pycache__/
 recordings/
 Liquid Whisper.app/
 suggestions.json
+assets/AppIcon.iconset/
 hud/node_modules/
 hud/dist/
 *.log

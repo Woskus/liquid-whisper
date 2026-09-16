@@ -27,20 +27,22 @@ export default function App() {
   return (
     <div className={`hud-root ${visible ? 'visible' : 'hidden'}`}>
       {/* jeden stały MetalFx — remount drugiej instancji zostawał w opacity:0
-          (race na współdzielonym kontekście WebGL); zmienia się tylko dziecko */}
+          (race na współdzielonym kontekście WebGL); zmienia się tylko dziecko.
+          Przetwarzanie: te same słupki, ale w automatycznej fali — spójny język
+          wizualny zamiast osobnego spinnera */}
       <MetalFx variant="button" preset="chromatic" theme="dark" paused={!visible}>
-        <div className={state === 'processing' ? 'hud-circle' : 'hud-capsule'}>
-          {state === 'processing' ? (
-            <span className="spinner" />
-          ) : (
-            BAR_SHAPE.map((mul, i) => (
-              <span
-                key={i}
-                className="bar"
-                style={{ height: `${BAR_MIN + (BAR_MAX - BAR_MIN) * Math.min(1, level * mul + 0.06)}px` }}
-              />
-            ))
-          )}
+        <div className="hud-capsule">
+          {BAR_SHAPE.map((mul, i) => (
+            <span
+              key={i}
+              className={`bar ${state === 'processing' ? 'wave' : ''}`}
+              style={
+                state === 'processing'
+                  ? { animationDelay: `${i * 0.13}s` }
+                  : { height: `${BAR_MIN + (BAR_MAX - BAR_MIN) * Math.min(1, level * mul + 0.06)}px` }
+              }
+            />
+          ))}
         </div>
       </MetalFx>
     </div>

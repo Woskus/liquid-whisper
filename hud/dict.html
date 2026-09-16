@@ -4,47 +4,93 @@
 <meta charset="UTF-8" />
 <title>Słowniczek</title>
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg: #0c0c10;
+    --card: rgba(255, 255, 255, 0.045);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text: #eceef2;
+    --dim: #8b90a0;
+    --faint: #565b6a;
+    --chrome: linear-gradient(180deg, #ffffff, #9aa4b8);
+    --wrong: #ff9d94;
+    --correct: #b7e3ba;
+  }
+  * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 18px 20px 24px;
-    background: #101014; color: #e8e8ee;
+    margin: 0; padding: 20px 22px 26px;
+    background: var(--bg); color: var(--text);
     font: 13px/1.5 -apple-system, 'SF Pro Text', sans-serif;
     user-select: none;
   }
-  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
-       color: #8a8a96; margin: 22px 0 8px; }
-  h2:first-child { margin-top: 0; }
-  .empty { color: #55555e; font-style: italic; }
-  .row { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-         background: #1a1a20; border-radius: 8px; margin-bottom: 6px; }
-  .row .wrong { color: #ff8a80; }
-  .row .arrow { color: #55555e; }
-  .row .correct { color: #a5d6a7; }
-  .row .count { color: #55555e; font-size: 11px; margin-left: auto; }
+
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .logo-bars { display: flex; align-items: center; gap: 3px; height: 20px;
+               padding: 0 9px; border-radius: 10px;
+               background: rgba(255,255,255,0.06); }
+  .logo-bars i { width: 2.5px; border-radius: 2px; background: var(--chrome); }
+  .logo-bars i:nth-child(1) { height: 6px; }
+  .logo-bars i:nth-child(2) { height: 11px; }
+  .logo-bars i:nth-child(3) { height: 14px; }
+  .logo-bars i:nth-child(4) { height: 11px; }
+  .logo-bars i:nth-child(5) { height: 6px; }
+  header .title {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+    background: var(--chrome); -webkit-background-clip: text; color: transparent;
+  }
+
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+       color: var(--dim); margin: 22px 0 8px; font-weight: 600; }
+  .empty { color: var(--faint); font-style: italic; padding: 2px 2px; }
+
+  .row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 12px; margin-bottom: 6px;
+  }
+  .row .wrong { color: var(--wrong); }
+  .row .arrow { color: var(--faint); }
+  .row .correct { color: var(--correct); }
+  .row .count { color: var(--faint); font-size: 11px; margin-left: auto; }
   .row .grow { flex: 1; }
+
   button {
-    border: 0; border-radius: 6px; padding: 4px 9px; cursor: pointer;
-    font-size: 12px; background: #2a2a32; color: #e8e8ee;
+    border: 1px solid var(--card-border); border-radius: 999px;
+    padding: 4px 11px; cursor: pointer; font-size: 12px;
+    background: rgba(255,255,255,0.06); color: var(--text);
+    transition: background 0.12s ease;
   }
-  button:hover { background: #34343e; }
-  button.ok { background: #1d3a26; color: #a5d6a7; }
-  button.ok:hover { background: #26512f; }
-  button.no { background: #3a1d1d; color: #ff8a80; }
-  button.no:hover { background: #512626; }
-  button.x { background: transparent; color: #55555e; padding: 2px 6px; }
-  button.x:hover { color: #ff8a80; background: transparent; }
+  button:hover { background: rgba(255,255,255,0.12); }
+  button.ok { border-color: rgba(183,227,186,0.25); color: var(--correct); }
+  button.ok:hover { background: rgba(183,227,186,0.12); }
+  button.no { border-color: rgba(255,157,148,0.22); color: var(--wrong); padding: 4px 9px; }
+  button.no:hover { background: rgba(255,157,148,0.1); }
+  button.x { border: 0; background: transparent; color: var(--faint); padding: 2px 5px; }
+  button.x:hover { color: var(--wrong); background: transparent; }
+
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { display: inline-flex; align-items: center; gap: 2px;
-          background: #1a1a20; border-radius: 999px; padding: 3px 4px 3px 12px; }
-  form.add { display: flex; gap: 6px; margin-top: 8px; }
-  input {
-    flex: 1; background: #1a1a20; border: 1px solid #2a2a32; border-radius: 6px;
-    color: #e8e8ee; padding: 5px 9px; font: inherit; outline: none;
+  .chip {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 999px; padding: 3px 4px 3px 12px;
   }
-  input:focus { border-color: #46465a; }
+
+  form.add { display: flex; gap: 6px; margin-top: 10px; }
+  input {
+    flex: 1; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--card-border); border-radius: 999px;
+    color: var(--text); padding: 5px 12px; font: inherit; outline: none;
+  }
+  input::placeholder { color: var(--faint); }
+  input:focus { border-color: rgba(255,255,255,0.25); }
 </style>
 </head>
 <body>
+  <header>
+    <span class="logo-bars"><i></i><i></i><i></i><i></i><i></i></span>
+    <span class="title">Liquid Whisper — słowniczek</span>
+  </header>
+
   <h2>Propozycje z dyktand</h2>
   <div id="suggestions"></div>
 

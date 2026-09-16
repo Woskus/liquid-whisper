@@ -23,6 +23,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key><string>com.liquidwhisper.app</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Liquid Whisper nagrywa dyktando po przytrzymaniu hotkeya.</string>
@@ -38,6 +39,10 @@ cd "$ROOT"
 "$ROOT/.venv/bin/python" -m liquid_whisper >> "\$HOME/Library/Logs/LiquidWhisper.log" 2>&1
 LAUNCHER
 chmod +x "$MACOS/liquid-whisper"
+
+if [[ -f "$ROOT/assets/AppIcon.icns" ]]; then
+    cp "$ROOT/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 # podpis ad-hoc — stabilna tożsamość dla TCC (uprawnienia nie znikają po rebuildzie)
 codesign --force -s - "$APP"
