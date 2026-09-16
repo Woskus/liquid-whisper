@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import Quartz
 import webview
 
 from .app import App, check_permissions
@@ -29,6 +30,7 @@ class Hud:
             raise FileNotFoundError(
                 f"brak bundle HUD: {DIST_INDEX} — zbuduj przez `cd hud && npm run build`"
             )
+        self._nswindow = None  # natywne NSWindow HUD-a, ustawiane w configure_overlay
         screen = webview.screens[0]
         self.window = webview.create_window(
             "Liquid Whisper",
@@ -45,6 +47,9 @@ class Hud:
         )
 
     def set_state(self, state: str) -> None:
+        if state == "recording":
+            # ekran/przestrzeń mogły się zmienić od startu — dosuń pastylkę na środek
+            self.recenter_async()
         try:
             self.window.evaluate_js(f"window.setHudState && window.setHudState('{state}')")
         except Exception:
@@ -56,30 +61,74 @@ class Hud:
         except Exception:
             pass  # wizualizacja poziomu jest kosmetyczna — nie zaśmiecamy loga
 
-    def make_click_through(self) -> None:
-        """Okno HUD nie może łapać myszy ani kraść fokusu — dyktujemy do innej aplikacji."""
+    def configure_overlay(self) -> None:
+        """Natywna konfiguracja okna HUD — wołać na wątku głównym.
+
+        Click-through (dyktujemy do innej aplikacji), poziom nad oknami
+        fullscreen i dołączanie do każdej przestrzeni oraz wyśrodkowanie.
+        """
         try:
+            import AppKit
             from AppKit import NSApplication
 
             for win in NSApplication.sharedApplication().windows():
+                if win.title() != "Liquid Whisper":
+                    continue  # okna słowniczka/ustawień mają zostać zwykłymi oknami
+                self._nswindow = win
                 win.setIgnoresMouseEvents_(True)
+                # poziom wygaszacza — ponad oknami aplikacji fullscreen;
+                # CanJoinAllSpaces + FullScreenAuxiliary: HUD wchodzi też na
+                # przestrzenie fullscreenowe jako okno pomocnicze
+                win.setLevel_(getattr(AppKit, "NSScreenSaverWindowLevel", 1000))
+                win.setCollectionBehavior_(
+                    AppKit.NSWindowCollectionBehaviorCanJoinAllSpaces
+                    | AppKit.NSWindowCollectionBehaviorStationary
+                    | AppKit.NSWindowCollectionBehaviorIgnoresCycle
+                    | AppKit.NSWindowCollectionBehaviorFullScreenAuxiliary
+                )
+                self._recenter(win)
         except Exception:
-            log.exception("nie udało się ustawić click-through (HUD może łapać kliknięcia)")
+            log.exception("nie udało się skonfigurować okna HUD")
+
+    def _recenter(self, win) -> None:
+        """Środek ekranu w poziomie + stały margines od dołu — natywnie z ramki
+        NSScreen, bo współrzędne wyliczane przez pywebview potrafią zjechać."""
+        from AppKit import NSScreen
+
+        screen = win.screen() or NSScreen.mainScreen()
+        if screen is None:
+            return
+        sf = screen.frame()
+        wf = win.frame()
+        x = sf.origin.x + (sf.size.width - wf.size.width) / 2.0
+        y = sf.origin.y + MARGIN_BOTTOM  # współrzędne Cocoa: origin w lewym dolnym rogu
+        win.setFrameOrigin_((x, y))
+
+    def recenter_async(self) -> None:
+        """Wyśrodkowanie z dowolnego wątku (AppKit wolno ruszać tylko z głównego)."""
+        if self._nswindow is None:
+            return
+        win = self._nswindow
+        Quartz.CFRunLoopPerformBlock(
+            Quartz.CFRunLoopGetMain(), Quartz.kCFRunLoopCommonModes, lambda: self._recenter(win)
+        )
+        Quartz.CFRunLoopWakeUp(Quartz.CFRunLoopGetMain())
 
 
 def run_with_hud(cfg: Config) -> None:
-    import Quartz
-
     hud = Hud()
     app = App(cfg, on_state=hud.set_state, on_level=hud.set_level)
 
     def backend() -> None:
-        hud.make_click_through()
-        # ikona w pasku menu musi powstać na wątku głównym
+        # konfiguracja natywna okna i ikona w pasku menu — na wątku głównym
         from .menubar import create_status_item
 
+        def _main_thread_setup() -> None:
+            hud.configure_overlay()
+            create_status_item(app)
+
         Quartz.CFRunLoopPerformBlock(
-            Quartz.CFRunLoopGetMain(), Quartz.kCFRunLoopCommonModes, lambda: create_status_item(app)
+            Quartz.CFRunLoopGetMain(), Quartz.kCFRunLoopCommonModes, _main_thread_setup
         )
         Quartz.CFRunLoopWakeUp(Quartz.CFRunLoopGetMain())
         check_permissions()
