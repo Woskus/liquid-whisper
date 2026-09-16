@@ -6,26 +6,17 @@ import logging
 import threading
 from collections.abc import Callable
 
-from pynput import keyboard
-
 from .asr import Transcriber
 from .audio import Recorder
 from .cleanup import Cleaner
 from .config import Config, load_config
+from .hotkey import HotkeyListener
 from .latency import LatencyReport
 from .paste import paste_text
 
 log = logging.getLogger("liquid_whisper.app")
 
 MIN_DICTATION_S = 0.3
-
-
-def parse_hotkey(name: str) -> keyboard.Key | keyboard.KeyCode:
-    """"alt_r" → Key.alt_r; pojedynczy znak → KeyCode."""
-    try:
-        return getattr(keyboard.Key, name)
-    except AttributeError:
-        return keyboard.KeyCode.from_char(name)
 
 
 def check_permissions() -> bool:
@@ -35,8 +26,8 @@ def check_permissions() -> bool:
     if not trusted:
         log.warning(
             "Brak uprawnień Accessibility — hotkey i ⌘V nie zadziałają. "
-            "System Settings → Privacy & Security → Accessibility: dodaj aplikację "
-            "terminala, z której uruchamiasz Liquid Whisper (oraz Input Monitoring)."
+            "System Settings → Privacy & Security → Accessibility (i Input Monitoring): "
+            "dodaj Liquid Whisper.app albo aplikację terminala, z której startujesz."
         )
     return trusted
 
@@ -62,17 +53,16 @@ class App:
             if cfg.cleanup_enabled
             else None
         )
-        self.hotkey = parse_hotkey(cfg.hotkey)
+        self.listener = HotkeyListener(cfg.hotkey, self._on_press, self._on_release)
         self._pressed = False
 
     def _set_state(self, state: str) -> None:
         log.info("stan: %s", state)
         self.on_state(state)
 
-    def _on_press(self, key) -> None:
-        # wyjątek w callbacku zabija listener pynput — nic nie może się wymknąć
+    def _on_press(self) -> None:
         try:
-            if key == self.hotkey and not self._pressed:
+            if not self._pressed:
                 self._pressed = True
                 self.recorder.start()
                 self._set_state("recording")
@@ -81,9 +71,9 @@ class App:
             self._pressed = False
             self._set_state("idle")
 
-    def _on_release(self, key) -> None:
+    def _on_release(self) -> None:
         try:
-            if key == self.hotkey and self._pressed:
+            if self._pressed:
                 self._pressed = False
                 audio = self.recorder.stop()
                 self._set_state("processing")
@@ -117,11 +107,6 @@ class App:
         finally:
             self._set_state("idle")
 
-    def start_listener(self) -> keyboard.Listener:
-        listener = keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
-        listener.start()
-        return listener
-
     def run(self) -> None:
         check_permissions()
         log.info("ładowanie modelu ASR...")
@@ -130,8 +115,7 @@ class App:
             self.cleaner.warmup()
         self._set_state("idle")
         log.info("gotowy — przytrzymaj [%s], mów, puść", self.cfg.hotkey)
-        listener = self.start_listener()
-        listener.join()
+        self.listener.run_blocking()
 
 
 def main() -> None:

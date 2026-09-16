@@ -72,7 +72,11 @@ def run_with_hud(cfg: Config) -> None:
         app.asr.warmup()
         if app.cleaner is not None:
             app.cleaner.warmup()
-        app.start_listener()
+        try:
+            app.listener.attach_to_main_runloop()
+        except PermissionError as e:
+            log.error("%s — nadaj uprawnienia i uruchom ponownie", e)
+            return
         log.info("gotowy — przytrzymaj [%s], mów, puść", cfg.hotkey)
 
     # webview.start blokuje główny wątek (wymóg cocoa); backend rusza w wątku pywebview

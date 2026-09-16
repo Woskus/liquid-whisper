@@ -9,11 +9,17 @@ Szczegóły projektu: [BRIEF.md](BRIEF.md).
 
 ## Uruchomienie
 
+Jako natywna aplikacja macOS (zalecane — uprawnienia przypięte do aplikacji):
+
 ```bash
-.venv/bin/python -m liquid_whisper
+./scripts/make_app.sh && open "Liquid Whisper.app"
 ```
 
-Tryb bez HUD: `.venv/bin/python -m liquid_whisper --no-hud`.
+Bundle opakowuje venv projektu, więc po zmianie kodu nie trzeba go przebudowywać
+(tylko po przeniesieniu folderu projektu). Logi: `~/Library/Logs/LiquidWhisper.log`.
+Zamykanie: ikona w Docku → Wymuś koniec (⌘⌥Esc) albo `pkill -f "liquid_whisper"`.
+
+Z terminala: `.venv/bin/python -m liquid_whisper` (tryb bez HUD: `--no-hud`).
 
 ## Setup od zera
 
@@ -26,7 +32,7 @@ brew services start ollama   # albo uruchom aplikację Ollama
 
 # 2. Zależności Pythona
 python3 -m venv .venv
-.venv/bin/pip install mlx-whisper sounddevice pynput pywebview \
+.venv/bin/pip install mlx-whisper sounddevice pywebview \
     pyobjc-framework-Quartz pyobjc-framework-Cocoa pyobjc-framework-ApplicationServices
 
 # 3. Model cleanup (dobrany w etapie 3 — patrz config.toml [cleanup].model)
@@ -43,13 +49,14 @@ Konfiguracja (hotkey, modele, słowniczek terminów): [config.toml](config.toml)
 
 ## Uprawnienia macOS (troubleshooting)
 
-Wszystkie uprawnienia nadaje się **aplikacji terminala**, z której uruchamiasz program
-(Terminal/iTerm2), w System Settings → Privacy & Security:
+Uprawnienia nadaje się w System Settings → Privacy & Security temu, co uruchamia
+program: **Liquid Whisper.app** (start przez `open`) albo aplikacji terminala
+(start przez `python -m liquid_whisper`):
 
 | Uprawnienie | Po co | Objaw braku |
 |---|---|---|
-| **Accessibility** | nasłuch hotkeya + syntetyczne ⌘V | log: „Brak uprawnień Accessibility"; hotkey milczy, nic się nie wkleja |
-| **Input Monitoring** | nasłuch klawiatury (pynput) | log: „This process is not trusted" |
+| **Accessibility** | syntetyczne ⌘V (wklejanie) | log: „Brak uprawnień Accessibility"; nic się nie wkleja |
+| **Input Monitoring** | globalny nasłuch hotkeya (CGEventTap) | hotkey milczy / „nie można utworzyć event tapu" |
 | **Microphone** | nagrywanie | cisza w transkrypcie (RMS ~0) |
 
 Po nadaniu uprawnień **zrestartuj terminal** — działający proces ich nie doczyta.
