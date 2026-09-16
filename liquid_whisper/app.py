@@ -10,6 +10,7 @@ from pynput import keyboard
 
 from .asr import Transcriber
 from .audio import Recorder
+from .cleanup import Cleaner
 from .config import Config, load_config
 from .latency import LatencyReport
 from .paste import paste_text
@@ -51,7 +52,16 @@ class App:
         self.on_state = on_state or (lambda state: None)
         self.recorder = Recorder(cfg.sample_rate, cfg.channels)
         self.asr = Transcriber(cfg.asr_model, cfg.language)
-        self.cleaner = None  # wpinany w etapie 3
+        self.cleaner = (
+            Cleaner(
+                model=cfg.cleanup_model,
+                dictionary=cfg.dictionary,
+                min_words=cfg.cleanup_min_words,
+                timeout_s=cfg.cleanup_timeout_s,
+            )
+            if cfg.cleanup_enabled
+            else None
+        )
         self.hotkey = parse_hotkey(cfg.hotkey)
         self._pressed = False
 
@@ -60,17 +70,27 @@ class App:
         self.on_state(state)
 
     def _on_press(self, key) -> None:
-        if key == self.hotkey and not self._pressed:
-            self._pressed = True
-            self.recorder.start()
-            self._set_state("recording")
+        # wyjątek w callbacku zabija listener pynput — nic nie może się wymknąć
+        try:
+            if key == self.hotkey and not self._pressed:
+                self._pressed = True
+                self.recorder.start()
+                self._set_state("recording")
+        except Exception:
+            log.exception("nie udało się rozpocząć nagrywania")
+            self._pressed = False
+            self._set_state("idle")
 
     def _on_release(self, key) -> None:
-        if key == self.hotkey and self._pressed:
-            self._pressed = False
-            audio = self.recorder.stop()
-            self._set_state("processing")
-            threading.Thread(target=self._process, args=(audio,), daemon=True).start()
+        try:
+            if key == self.hotkey and self._pressed:
+                self._pressed = False
+                audio = self.recorder.stop()
+                self._set_state("processing")
+                threading.Thread(target=self._process, args=(audio,), daemon=True).start()
+        except Exception:
+            log.exception("błąd przy kończeniu nagrania")
+            self._set_state("idle")
 
     def _process(self, audio) -> None:
         try:
@@ -106,6 +126,8 @@ class App:
         check_permissions()
         log.info("ładowanie modelu ASR...")
         self.asr.warmup()
+        if self.cleaner is not None:
+            self.cleaner.warmup()
         self._set_state("idle")
         log.info("gotowy — przytrzymaj [%s], mów, puść", self.cfg.hotkey)
         listener = self.start_listener()
@@ -113,8 +135,23 @@ class App:
 
 
 def main() -> None:
+    import argparse
+
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-    App(load_config()).run()
+    parser = argparse.ArgumentParser(prog="liquid-whisper")
+    parser.add_argument("--no-hud", action="store_true", help="tryb headless, bez overlaya")
+    args = parser.parse_args()
+    cfg = load_config()
+
+    if not args.no_hud:
+        try:
+            from .hud import run_with_hud
+
+            run_with_hud(cfg)
+            return
+        except Exception:
+            log.exception("HUD niedostępny — przechodzę w tryb headless")
+    App(cfg).run()
 
 
 if __name__ == "__main__":

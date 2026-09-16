@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 
 import numpy as np
 import sounddevice as sd
+
+log = logging.getLogger("liquid_whisper.audio")
 
 
 class Recorder:
@@ -23,13 +26,24 @@ class Recorder:
             if self._stream is not None:
                 return
             self._chunks = []
-            self._stream = sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                dtype="float32",
-                callback=self._callback,
-            )
+            try:
+                self._stream = self._open_stream()
+            except sd.PortAudioError as e:
+                # CoreAudio potrafi "zgubić" urządzenie (np. uśpiony mikrofon USB)
+                # — odświeżenie listy urządzeń przez reinicjalizację PortAudio
+                log.warning("otwarcie mikrofonu nieudane (%s) — reinicjalizuję PortAudio", e)
+                sd._terminate()
+                sd._initialize()
+                self._stream = self._open_stream()
             self._stream.start()
+
+    def _open_stream(self) -> sd.InputStream:
+        return sd.InputStream(
+            samplerate=self.sample_rate,
+            channels=self.channels,
+            dtype="float32",
+            callback=self._callback,
+        )
 
     def _callback(self, indata, frames, time_info, status) -> None:
         self._chunks.append(indata.copy())
