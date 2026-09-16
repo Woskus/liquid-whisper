@@ -8,34 +8,6 @@ import Quartz
 from AppKit import NSPasteboard, NSPasteboardTypeString
 
 KEY_V = 9  # kVK_ANSI_V
-KEY_BACKSPACE = 51
-
-
-def type_text(text: str) -> None:
-    """Wpisuje tekst w aktywne pole jako zdarzenia klawiatury (unicode, bez schowka).
-
-    Używane przez streaming na żywo — ⌘V byłoby zbyt inwazyjne przy częstych
-    aktualizacjach. Chunki po 20 znaków (limit CGEventKeyboardSetUnicodeString).
-    """
-    source = Quartz.CGEventSourceCreate(Quartz.kCGEventSourceStateHIDSystemState)
-    for i in range(0, len(text), 20):
-        chunk = text[i : i + 20]
-        for key_down in (True, False):
-            event = Quartz.CGEventCreateKeyboardEvent(source, 0, key_down)
-            Quartz.CGEventKeyboardSetUnicodeString(event, len(chunk.encode("utf-16-le")) // 2, chunk)
-            Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
-        time.sleep(0.004)
-
-
-def send_backspaces(n: int) -> None:
-    """Cofa n znaków w aktywnym polu (rewizja tekstu wpisanego przez streaming)."""
-    source = Quartz.CGEventSourceCreate(Quartz.kCGEventSourceStateHIDSystemState)
-    for i in range(n):
-        for key_down in (True, False):
-            event = Quartz.CGEventCreateKeyboardEvent(source, KEY_BACKSPACE, key_down)
-            Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
-        if i % 10 == 9:
-            time.sleep(0.004)
 
 
 def set_clipboard(text: str) -> None:

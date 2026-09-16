@@ -79,13 +79,7 @@ def run_with_hud(cfg: Config) -> None:
     import Quartz
 
     hud = Hud()
-    app = App(
-        cfg,
-        on_state=hud.set_state,
-        on_level=hud.set_level,
-        # pasek podglądu w HUD tylko gdy streaming nie wpisuje prosto w pole
-        on_partial=hud.set_partial if cfg.streaming_mode == "hud" else None,
-    )
+    app = App(cfg, on_state=hud.set_state, on_level=hud.set_level, on_partial=hud.set_partial)
 
     def backend() -> None:
         hud.make_click_through()
