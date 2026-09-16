@@ -1,0 +1,67 @@
+# Liquid Whisper — szablon konfiguracji
+#
+# Przy pierwszym uruchomieniu kopiowany do:
+#   ~/Library/Application Support/LiquidWhisper/config.toml
+# i tam edytowany (ręcznie albo przez okienko słowniczka w pasku menu).
+# Ten plik w repozytorium to tylko domyślne wartości startowe.
+
+[hotkey]
+# push-to-talk: przytrzymaj, mów, puść
+# dostępne: alt_r/alt_l, ctrl_r/ctrl_l, cmd_r/cmd_l, shift_r/shift_l, f13-f19
+key = "ctrl_r"
+
+[audio]
+sample_rate = 16000
+channels = 1
+
+[asr]
+model = "mlx-community/whisper-large-v3-turbo"
+language = "pl"
+
+[cleanup]
+enabled = true
+# model Ollama czyszczący transkrypt (patrz scripts/compare_cleanup.py)
+model = "gemma3:4b"
+# fallback latencji: dyktanda krótsze niż tyle słów wklejane są surowe
+min_words = 0
+timeout_s = 10.0
+
+# słowniczek terminów — naprawianie fonetycznych zniekształceń angielskich
+# wtrąceń; dopisz własne (nazwy firm, produktów, żargon zespołu)
+[dictionary]
+terms = [
+    "deployment",
+    "backlog",
+    "code review",
+    "pull request",
+    "merge request",
+    "commit",
+    "pipeline",
+    "frontend",
+    "backend",
+    "build",
+    "refactor",
+    "legacy",
+    "repo",
+    "daily",
+    "standup",
+    "ticket",
+    "hotfix",
+    "approval",
+    "tech lead",
+    "benchmark",
+    "endpoint",
+    "payload",
+    "request body",
+    "staging",
+    "feature flag",
+    "onboarding",
+    "sprint",
+    "refinement",
+    "testy A/B",
+]
+
+# usłyszane -> poprawne (akceptowane propozycje trafiają tutaj)
+[dictionary.corrections]
+"bac clock" = "backlog"
+"co derewie" = "code review"

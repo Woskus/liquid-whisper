@@ -1,10 +1,15 @@
+# prywatne dane użytkownika mieszkają w ~/Library/Application Support/LiquidWhisper/
+# — gdyby jednak wylądowały w repo, nie commitujemy ich
+config.toml
+suggestions.json
+recordings/
+
 .venv/
 __pycache__/
 *.pyc
 .DS_Store
-recordings/
+.idea/
 Liquid Whisper.app/
-suggestions.json
 assets/AppIcon.iconset/
 hud/node_modules/
 hud/dist/

@@ -1,13 +1,59 @@
 # Liquid Whisper
 
-Lokalny klon Wispr Flow na macOS: przytrzymaj hotkey (prawy Ctrl), powiedz coś po polsku
-(z angielskimi wtrąceniami), puść — oczyszczony tekst wskakuje w aktywne pole tekstowe.
-Na dłuższe dyktanda: **dwuklik** hotkeya włącza nagrywanie ciągłe, pojedyncze
-kliknięcie je kończy. Pojedyncze przypadkowe kliknięcie jest ignorowane.
-Wszystko działa lokalnie: Whisper large-v3-turbo (mlx-whisper) + mały LLM przez Ollama.
-W trakcie dyktowania na dole ekranu widać liquid-metalowy HUD (React + metal-fx w pywebview).
+Lokalny klon Wispr Flow na macOS dla języka polskiego: przytrzymaj hotkey (domyślnie
+prawy Ctrl), powiedz coś po polsku (z angielskimi wtrąceniami IT), puść — oczyszczony
+tekst wskakuje w aktywne pole tekstowe dowolnej aplikacji. Wszystko działa w 100%
+lokalnie i za darmo: Whisper large-v3-turbo (mlx-whisper) + mały LLM przez Ollama.
+Zero chmury, zero subskrypcji, głos nie opuszcza komputera.
 
-Szczegóły projektu: [BRIEF.md](BRIEF.md).
+> **English note:** Liquid Whisper is a fully local push-to-talk dictation tool for
+> macOS (Apple Silicon), tuned for **Polish** speech with English tech jargon mixed in.
+> The UI, prompts and docs are in Polish.
+
+- **Push-to-talk** — przytrzymaj hotkey, mów, puść.
+- **Nagrywanie ciągłe** — dwuklik hotkeya zaczyna, pojedyncze kliknięcie kończy
+  (pojedyncze przypadkowe kliknięcie jest ignorowane).
+- **Cleanup przez LLM** — lokalny model (Ollama) usuwa „yyy/eee", poprawia interpunkcję
+  i fonetycznie zniekształcone angielskie terminy („co derewie" → „code review").
+- **Samouczący się słowniczek** — pipeline porównuje surowy transkrypt z oczyszczonym
+  i proponuje poprawki, które akceptujesz jednym kliknięciem.
+- **Liquid-metalowy HUD** — chromowany wskaźnik nagrywania na dole ekranu
+  (React + [metal-fx](https://github.com/Jakubantalik/metal-fx) w pywebview).
+
+Historia i decyzje projektowe: [brief.md](brief.md).
+
+## Instalacja z pomocą agenta AI (zalecane)
+
+Sklonuj repozytorium, otwórz je w Claude Code (lub innym agencie AI) i poproś:
+
+> „Przygotuj mi tę aplikację do działania zgodnie z AGENTS.md — zainstaluj zależności,
+> pobierz modele, zbuduj aplikację i wytłumacz, jak z niej korzystać."
+
+Agent znajdzie kompletną instrukcję w [AGENTS.md](AGENTS.md).
+
+## Instalacja ręczna
+
+Wymagania: macOS na **Apple Silicon** (pipeline używa MLX), Homebrew, ~8 GB wolnego
+RAM przy pracy (ASR ~1,5 GB + LLM ~4 GB), ~6 GB dysku na modele.
+
+```bash
+# 1. Narzędzia systemowe
+brew install python ffmpeg node ollama
+brew services start ollama   # albo uruchom aplikację Ollama
+
+# 2. Zależności Pythona
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+
+# 3. Model cleanup (LLM czyszczący transkrypt, ~3,3 GB)
+ollama pull gemma3:4b
+
+# 4. Bundle HUD
+cd hud && npm install && npm run build && cd ..
+
+# 5. Start (model Whispera ~1,6 GB ściągnie się z Hugging Face przy pierwszym uruchomieniu)
+.venv/bin/python -m liquid_whisper
+```
 
 ## Uruchomienie
 
@@ -19,35 +65,17 @@ Jako natywna aplikacja macOS (zalecane — uprawnienia przypięte do aplikacji):
 
 Bundle opakowuje venv projektu, więc po zmianie kodu nie trzeba go przebudowywać
 (tylko po przeniesieniu folderu projektu). Logi: `~/Library/Logs/LiquidWhisper.log`.
-Zamykanie: ikona w Docku → Wymuś koniec (⌘⌥Esc) albo `pkill -f "liquid_whisper"`.
+Zamykanie: menu → **Zakończ Liquid Whisper** albo `pkill -f "liquid_whisper"`.
 
 Z terminala: `.venv/bin/python -m liquid_whisper` (tryb bez HUD: `--no-hud`).
 
-## Setup od zera
+## Konfiguracja
 
-Wymagania: macOS (Apple Silicon), Homebrew.
-
-```bash
-# 1. Narzędzia systemowe
-brew install python ffmpeg node ollama
-brew services start ollama   # albo uruchom aplikację Ollama
-
-# 2. Zależności Pythona
-python3 -m venv .venv
-.venv/bin/pip install mlx-whisper sounddevice pywebview \
-    pyobjc-framework-Quartz pyobjc-framework-Cocoa pyobjc-framework-ApplicationServices
-
-# 3. Model cleanup (dobrany w etapie 3 — patrz config.toml [cleanup].model)
-ollama pull gemma3:4b
-
-# 4. Bundle HUD
-cd hud && npm install && npm run build && cd ..
-
-# 5. Start (model Whispera ~1,6 GB ściągnie się przy pierwszym uruchomieniu)
-.venv/bin/python -m liquid_whisper
-```
-
-Konfiguracja (hotkey, modele, słowniczek terminów): [config.toml](config.toml).
+Prywatne ustawienia (hotkey, modele, słowniczek terminów, poprawki) mieszkają **poza
+repozytorium** — w `~/Library/Application Support/LiquidWhisper/config.toml`. Plik
+powstaje przy pierwszym uruchomieniu z szablonu [config.default.toml](config.default.toml).
+Tam też trafiają propozycje słowniczka (`suggestions.json`) i nagrania testowe
+(`recordings/`).
 
 ## Pasek menu i słowniczek
 
@@ -55,11 +83,9 @@ Aplikacja pokazuje ikonę kropli w pasku menu. Menu → **Słowniczek…** otwie
 
 - **Propozycjami z dyktand** — pipeline porównuje surowy transkrypt z oczyszczonym
   i zbiera pary „usłyszane → poprawione"; jednym kliknięciem akceptujesz je do
-  słowniczka (✓) albo odrzucasz (✕). Stan propozycji: `suggestions.json`.
+  słowniczka (✓) albo odrzucasz (✕).
 - **Poprawkami** (usłyszane → poprawne) i **terminami** — edytowalne ręcznie,
-  zapisywane w `config.toml`, używane w prompcie cleanupu od następnego dyktanda.
-
-Menu → **Zakończ Liquid Whisper** zamyka aplikację.
+  używane w prompcie cleanupu od następnego dyktanda.
 
 ## Uprawnienia macOS (troubleshooting)
 
@@ -73,7 +99,7 @@ program: **Liquid Whisper.app** (start przez `open`) albo aplikacji terminala
 | **Input Monitoring** | globalny nasłuch hotkeya (CGEventTap) | hotkey milczy / „nie można utworzyć event tapu" |
 | **Microphone** | nagrywanie | cisza w transkrypcie (RMS ~0) |
 
-Po nadaniu uprawnień **zrestartuj terminal** — działający proces ich nie doczyta.
+Po nadaniu uprawnień **uruchom aplikację ponownie** — działający proces ich nie doczyta.
 
 Inne typowe problemy:
 
@@ -90,5 +116,9 @@ Inne typowe problemy:
 ```bash
 .venv/bin/python -m liquid_whisper.cli file plik.wav   # transkrypcja pliku
 .venv/bin/python -m liquid_whisper.cli record 15       # nagraj 15 s, transkrypt do schowka
-.venv/bin/python scripts/compare_cleanup.py            # porównanie modeli cleanup na recordings/
+.venv/bin/python scripts/compare_cleanup.py            # porównanie modeli cleanup na nagraniach
 ```
+
+## Licencja
+
+[MIT](LICENSE).

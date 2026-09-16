@@ -1,6 +1,8 @@
 """Porównanie kandydatów cleanup (etap 3) na realnych dyktandach.
 
-Transkrybuje wszystkie WAV-y z recordings/, przepuszcza surowe transkrypty
+Transkrybuje wszystkie WAV-y z katalogu danych użytkownika
+(~/Library/Application Support/LiquidWhisper/recordings/ — nagrywa tam
+`python -m liquid_whisper.cli record`), przepuszcza surowe transkrypty
 przez każdy model z listy i wypisuje zestawienie wyjść + latencji.
 
   .venv/bin/python scripts/compare_cleanup.py [model1 model2 ...]
@@ -16,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from liquid_whisper.asr import Transcriber
 from liquid_whisper.cleanup import Cleaner
-from liquid_whisper.config import load_config
+from liquid_whisper.config import DATA_DIR, load_config
 
 DEFAULT_MODELS = [
     "qwen3:4b-instruct",
@@ -28,10 +30,10 @@ DEFAULT_MODELS = [
 def main() -> None:
     models = sys.argv[1:] or DEFAULT_MODELS
     cfg = load_config()
-    root = Path(__file__).resolve().parent.parent
-    wavs = sorted((root / "recordings").glob("*.wav"))
+    rec_dir = DATA_DIR / "recordings"
+    wavs = sorted(rec_dir.glob("*.wav"))
     if not wavs:
-        sys.exit("brak nagrań w recordings/")
+        sys.exit(f"brak nagrań w {rec_dir}/ — nagraj coś: python -m liquid_whisper.cli record")
 
     asr = Transcriber(model=cfg.asr_model, language=cfg.language)
     print("transkrybuję nagrania...", file=sys.stderr)

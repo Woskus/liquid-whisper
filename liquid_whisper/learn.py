@@ -14,9 +14,9 @@ import unicodedata
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from .config import PROJECT_ROOT
+from .config import DATA_DIR
 
-STATE_PATH = PROJECT_ROOT / "suggestions.json"
+STATE_PATH = DATA_DIR / "suggestions.json"
 
 _WORD_RE = re.compile(r"[\w'-]+")
 
@@ -62,6 +62,7 @@ class SuggestionStore:
                 pass
 
     def _save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(
             json.dumps(self._data, ensure_ascii=False, indent=2), encoding="utf-8"
         )

@@ -1,0 +1,13 @@
+# pipeline
+mlx-whisper>=0.4
+sounddevice>=0.5
+httpx>=0.28
+numpy
+
+# integracja z macOS (hotkey, schowek, ⌘V, pasek menu)
+pyobjc-framework-Quartz>=12
+pyobjc-framework-Cocoa>=12
+pyobjc-framework-ApplicationServices>=12
+
+# HUD (WKWebView)
+pywebview>=6

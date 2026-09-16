@@ -42,15 +42,16 @@ def main() -> None:
         audio = record_seconds(args.seconds, cfg.sample_rate)
         print("Koniec nagrania, transkrybuję...", file=sys.stderr)
 
-        # zapis nagrania do recordings/ — materiał do porównania modeli cleanup
+        # zapis nagrania do katalogu danych — materiał do porównania modeli cleanup
         import datetime
         import wave
-        from pathlib import Path
 
         import numpy as np
 
-        rec_dir = Path(__file__).resolve().parent.parent / "recordings"
-        rec_dir.mkdir(exist_ok=True)
+        from .config import DATA_DIR
+
+        rec_dir = DATA_DIR / "recordings"
+        rec_dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         wav_path = rec_dir / f"dyktando_{stamp}.wav"
         with wave.open(str(wav_path), "wb") as wf:

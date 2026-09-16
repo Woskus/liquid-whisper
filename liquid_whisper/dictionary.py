@@ -1,4 +1,4 @@
-"""Odczyt i zapis sekcji [dictionary] w config.toml.
+"""Odczyt i zapis sekcji [dictionary] w konfiguracji użytkownika.
 
 Zapis podmienia wyłącznie końcówkę pliku od nagłówka [dictionary] —
 reszta configu (komentarze, inne sekcje) zostaje nietknięta.
@@ -9,13 +9,13 @@ from __future__ import annotations
 import threading
 import tomllib
 
-from .config import CONFIG_PATH
+from .config import CONFIG_PATH, ensure_user_config
 
 _lock = threading.Lock()
 
 
 def load() -> tuple[list[str], dict[str, str]]:
-    with open(CONFIG_PATH, "rb") as f:
+    with open(ensure_user_config(), "rb") as f:
         raw = tomllib.load(f)
     d = raw.get("dictionary", {})
     return list(d.get("terms", [])), dict(d.get("corrections", {}))
