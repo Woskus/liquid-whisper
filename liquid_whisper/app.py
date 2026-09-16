@@ -18,6 +18,8 @@ from .paste import paste_text
 log = logging.getLogger("liquid_whisper.app")
 
 MIN_DICTATION_S = 0.3
+TAP_MAX_S = 0.35  # krótsze przytrzymanie = "kliknięcie" (kandydat na dwuklik)
+DOUBLE_TAP_GAP_S = 0.45  # maks. przerwa między kliknięciami dwukliku
 
 
 def check_permissions() -> bool:
@@ -77,7 +79,12 @@ class App:
 
         self.suggestions = SuggestionStore()
         self.listener = HotkeyListener(cfg.hotkey, self._on_press, self._on_release)
-        self._pressed = False
+        # tryby: idle | held (przytrzymany, push-to-talk) | grace (po 1. kliknięciu,
+        # czekamy na ewentualny dwuklik) | held2 (2. kliknięcie wciśnięte) |
+        # toggle (nagrywanie ciągłe) | stopping (kliknięcie kończące toggle)
+        self._mode = "idle"
+        self._press_t = 0.0
+        self._grace_timer: threading.Timer | None = None
         # callback tapa działa na głównym wątku i musi wracać natychmiast
         # (timeout tapa, deadlock evaluate_js) — akcje wykonuje wątek roboczy
         self._actions: queue.Queue[Callable[[], None]] = queue.Queue()
@@ -122,29 +129,82 @@ class App:
                 return
             time.sleep(0.08)
 
+    def _start_recording(self) -> None:
+        self.recorder.start()
+        self._set_state("recording")
+        if self.on_level is not None:
+            threading.Thread(target=self._level_pump, daemon=True).start()
+
+    def _finish_recording(self) -> None:
+        audio = self.recorder.stop()
+        self._set_state("processing")
+        threading.Thread(target=self._process, args=(audio,), daemon=True).start()
+
     def _press_action(self) -> None:
+        import time
+
         try:
-            if not self._pressed:
-                self._pressed = True
-                self.recorder.start()
-                self._set_state("recording")
-                if self.on_level is not None:
-                    threading.Thread(target=self._level_pump, daemon=True).start()
+            if self._mode == "idle":
+                self._press_t = time.monotonic()
+                self._start_recording()
+                self._mode = "held"
+            elif self._mode == "grace":
+                # drugie kliknięcie dwukliku — nagrywanie już trwa, tylko je utrzymujemy
+                if self._grace_timer is not None:
+                    self._grace_timer.cancel()
+                    self._grace_timer = None
+                self._press_t = time.monotonic()
+                self._mode = "held2"
+            elif self._mode == "toggle":
+                # pojedyncze kliknięcie kończy nagrywanie ciągłe
+                log.info("nagrywanie ciągłe: stop")
+                self._finish_recording()
+                self._mode = "stopping"
         except Exception:
             log.exception("nie udało się rozpocząć nagrywania")
-            self._pressed = False
+            self._mode = "idle"
             self._set_state("idle")
 
     def _release_action(self) -> None:
+        import time
+
         try:
-            if self._pressed:
-                self._pressed = False
-                audio = self.recorder.stop()
-                self._set_state("processing")
-                threading.Thread(target=self._process, args=(audio,), daemon=True).start()
+            held_s = time.monotonic() - self._press_t
+            if self._mode == "held":
+                if held_s >= TAP_MAX_S:
+                    self._finish_recording()  # klasyczny push-to-talk
+                    self._mode = "idle"
+                else:
+                    # kliknięcie — czekamy chwilę na drugie (dwuklik = tryb ciągły)
+                    self._mode = "grace"
+                    self._grace_timer = threading.Timer(
+                        DOUBLE_TAP_GAP_S, lambda: self._actions.put(self._grace_expired)
+                    )
+                    self._grace_timer.daemon = True
+                    self._grace_timer.start()
+            elif self._mode == "held2":
+                if held_s >= TAP_MAX_S:
+                    self._finish_recording()  # drugie "kliknięcie" okazało się przytrzymaniem
+                    self._mode = "idle"
+                else:
+                    log.info("nagrywanie ciągłe: start (zakończysz pojedynczym kliknięciem)")
+                    self._mode = "toggle"
+            elif self._mode == "stopping":
+                self._mode = "idle"
         except Exception:
             log.exception("błąd przy kończeniu nagrania")
+            self._mode = "idle"
             self._set_state("idle")
+
+    def _grace_expired(self) -> None:
+        """Minęło okno dwukliku po pojedynczym kliknięciu — odrzucamy przypadkowe nagranie."""
+        if self._mode != "grace":
+            return
+        self._grace_timer = None
+        self._mode = "idle"
+        self.recorder.stop()
+        log.info("pojedyncze kliknięcie hotkeya — ignoruję")
+        self._set_state("idle")
 
     def _process(self, audio) -> None:
         try:
