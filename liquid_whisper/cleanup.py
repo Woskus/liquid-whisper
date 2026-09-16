@@ -56,8 +56,36 @@ class Cleaner:
         )
         return SYSTEM_PROMPT.format(dictionary=terms, corrections=pairs)
 
+    def ensure_server(self, wait_s: float = 20.0) -> bool:
+        """Jeśli Ollama nie odpowiada — uruchamia aplikację Ollama w tle i czeka aż wstanie."""
+        import subprocess
+        import time
+
+        try:
+            self._client.get("/api/version", timeout=1.5)
+            return True
+        except httpx.HTTPError:
+            pass
+        log.info("Ollama nie działa — uruchamiam w tle...")
+        try:
+            subprocess.run(["open", "-g", "-a", "Ollama"], check=True, capture_output=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            log.warning("nie udało się uruchomić aplikacji Ollama — cleanup będzie pomijany")
+            return False
+        deadline = time.monotonic() + wait_s
+        while time.monotonic() < deadline:
+            try:
+                self._client.get("/api/version", timeout=1.5)
+                log.info("Ollama wystartowała")
+                return True
+            except httpx.HTTPError:
+                time.sleep(0.5)
+        log.warning("Ollama nie wstała w %.0f s — cleanup będzie pomijany do skutku", wait_s)
+        return False
+
     def warmup(self) -> None:
         """Ładuje model do RAM na starcie, żeby pierwsze dyktando nie płaciło za load."""
+        self.ensure_server()
         try:
             self._client.post(
                 "/api/generate",

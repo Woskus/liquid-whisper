@@ -76,8 +76,9 @@ Po nadaniu uprawnień **zrestartuj terminal** — działający proces ich nie do
 Inne typowe problemy:
 
 - **Wkleja się stary tekst / nic** — aktywne pole musi obsługiwać ⌘V; kliknij w pole przed dyktowaniem.
-- **Cleanup nie działa** — sprawdź `curl http://localhost:11434/api/version`; przy braku
-  odpowiedzi uruchom Ollama. Pipeline wtedy i tak wkleja surowy transkrypt (fallback).
+- **Cleanup nie działa** — aplikacja przy starcie sama uruchamia Ollamę, jeśli ta nie
+  działa (`open -g -a Ollama`). Gdyby i to zawiodło (log: „Ollama nie wstała"), uruchom ją
+  ręcznie; pipeline w międzyczasie wkleja surowy transkrypt (fallback).
 - **Zły mikrofon** — domyślne wejście zmienisz w System Settings → Sound → Input.
 - **HUD się nie pokazuje** — zbuduj bundle: `cd hud && npm run build`; aplikacja bez niego
   przechodzi w tryb headless (dyktowanie działa dalej).
