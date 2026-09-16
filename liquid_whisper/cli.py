@@ -41,6 +41,24 @@ def main() -> None:
         print(f"Nagrywam {args.seconds:.0f} s — mów teraz...", file=sys.stderr)
         audio = record_seconds(args.seconds, cfg.sample_rate)
         print("Koniec nagrania, transkrybuję...", file=sys.stderr)
+
+        # zapis nagrania do recordings/ — materiał do porównania modeli cleanup
+        import datetime
+        import wave
+        from pathlib import Path
+
+        import numpy as np
+
+        rec_dir = Path(__file__).resolve().parent.parent / "recordings"
+        rec_dir.mkdir(exist_ok=True)
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        wav_path = rec_dir / f"dyktando_{stamp}.wav"
+        with wave.open(str(wav_path), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(cfg.sample_rate)
+            wf.writeframes((np.clip(audio, -1, 1) * 32767).astype("<i2").tobytes())
+        print(f"(nagranie zapisane: {wav_path})", file=sys.stderr)
         with report.measure("transkrypcja"):
             text = asr.transcribe(audio)
         print(text)
