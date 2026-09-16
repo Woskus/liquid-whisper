@@ -64,6 +64,7 @@ class Cleaner:
         min_words: int = 0,
         timeout_s: float = 10.0,
         keep_alive: str = "60m",
+        prompt_template: str | None = None,
     ) -> None:
         self.model = model
         self.dictionary = dictionary or []
@@ -71,6 +72,7 @@ class Cleaner:
         self.min_words = min_words
         self.timeout_s = timeout_s
         self.keep_alive = keep_alive
+        self.prompt_template = prompt_template or SYSTEM_PROMPT
         self._client = httpx.Client(base_url=OLLAMA_URL, timeout=timeout_s)
 
     def _system_prompt(self) -> str:
@@ -80,7 +82,9 @@ class Cleaner:
             if self.corrections
             else "(brak)"
         )
-        return SYSTEM_PROMPT.format(dictionary=terms, corrections=pairs)
+        # replace zamiast format: własny prompt użytkownika może zawierać
+        # nawiasy klamrowe, które wywróciłyby str.format
+        return self.prompt_template.replace("{dictionary}", terms).replace("{corrections}", pairs)
 
     def ensure_server(self, wait_s: float = 20.0) -> bool:
         """Jeśli Ollama nie odpowiada — uruchamia aplikację Ollama w tle i czeka aż wstanie."""

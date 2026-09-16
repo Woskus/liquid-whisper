@@ -64,6 +64,8 @@ class App:
         self.on_level = on_level
         self.recorder = Recorder(cfg.sample_rate, cfg.channels)
         self.asr = Transcriber(cfg.asr_model, cfg.language)
+        from .settings import load_prompt
+
         self.cleaner = (
             Cleaner(
                 model=cfg.cleanup_model,
@@ -71,6 +73,7 @@ class App:
                 corrections=cfg.corrections,
                 min_words=cfg.cleanup_min_words,
                 timeout_s=cfg.cleanup_timeout_s,
+                prompt_template=load_prompt(),
             )
             if cfg.cleanup_enabled
             else None
@@ -107,6 +110,20 @@ class App:
 
     def _on_release(self) -> None:
         self._actions.put(self._release_action)
+
+    def apply_settings(self, hotkey: str, cleanup_model: str, prompt_template: str) -> None:
+        """Stosuje ustawienia na żywo (zapis na dysk robi menubar.SettingsApi)."""
+        if hotkey != self.cfg.hotkey:
+            self.listener.set_key(hotkey)
+            self.cfg.hotkey = hotkey
+        model_changed = cleanup_model != self.cfg.cleanup_model
+        self.cfg.cleanup_model = cleanup_model
+        if self.cleaner is not None:
+            self.cleaner.prompt_template = prompt_template
+            if model_changed:
+                self.cleaner.model = cleanup_model
+                # warmup w tle, żeby pierwsze dyktando na nowym modelu nie płaciło za load
+                threading.Thread(target=self.cleaner.warmup, daemon=True).start()
 
     def reload_dictionary(self) -> None:
         """Po zmianie słowniczka w okienku — świeże dane do promptu cleanupu."""

@@ -58,6 +58,16 @@ class HotkeyListener:
         self.on_release = on_release
         self._tap = None
 
+    def set_key(self, key: str) -> None:
+        """Podmienia hotkey na żywo — tap nasłuchuje wszystkich klawiszy,
+        a callback filtruje po tych polach, więc nie trzeba go przepinać."""
+        if key not in KEYCODES:
+            raise ValueError(f"nieobsługiwany hotkey '{key}' — dostępne: {', '.join(KEYCODES)}")
+        self.key = key
+        self.keycode = KEYCODES[key]
+        self.modifier_flag = MODIFIER_FLAG.get(key)
+        log.info("hotkey zmieniony na [%s]", key)
+
     def _callback(self, proxy, type_, event, refcon):
         try:
             if type_ in (Quartz.kCGEventTapDisabledByTimeout, Quartz.kCGEventTapDisabledByUserInput):

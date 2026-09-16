@@ -94,8 +94,11 @@ Logi aplikacji (start przez `open`): `~/Library/Logs/LiquidWhisper.log`.
   kliknięcie je kończy. Pojedyncze przypadkowe kliknięcie jest ignorowane.
 - **Pasek menu** (ikona kropli) → **Słowniczek…**: akceptowanie/odrzucanie propozycji
   poprawek z dyktand oraz ręczna edycja terminów i poprawek.
-- **Konfiguracja** (hotkey, modele): `~/Library/Application Support/LiquidWhisper/config.toml`
-  — zmiany wymagają restartu aplikacji.
+- **Pasek menu → Ustawienia…**: zmiana przycisku nagrywania, wybór modelu cleanup
+  spośród zainstalowanych w Ollamie i edycja promptu systemowego — wszystko działa
+  od razu, bez restartu.
+- **Konfiguracja plikowa**: `~/Library/Application Support/LiquidWhisper/config.toml`
+  — ręczne zmiany wymagają restartu aplikacji (okno ustawień nie).
 
 ## Architektura i mapa repozytorium
 
@@ -108,8 +111,10 @@ liquid_whisper/         pakiet Pythona (rdzeń)
   paste.py              schowek + syntetyczne ⌘V (CGEvent)
   hotkey.py             globalny nasłuch klawisza (CGEventTap, Quartz)
   hud.py                overlay pywebview renderujący hud/dist
-  menubar.py            ikona w pasku menu (AppKit) + okno słowniczka (hud/dict.html)
+  menubar.py            ikona w pasku menu (AppKit) + okna słowniczka (hud/dict.html)
+                        i ustawień (hud/settings.html)
   dictionary.py         odczyt/zapis sekcji [dictionary] w configu użytkownika
+  settings.py           punktowa edycja kluczy configu + własny prompt cleanupu
   learn.py              propozycje słowniczka z diffu surowy→oczyszczony
   config.py             ścieżki + wczytywanie configu (patrz niżej)
   cli.py                narzędzia: transkrypcja pliku / nagranie testowe
@@ -125,7 +130,9 @@ brief.md                brief projektu — decyzje i research
 
 - `config.toml` — tworzony przy pierwszym starcie z `config.default.toml`
   (kopiuje `liquid_whisper/config.py:ensure_user_config`); potem edytowany przez
-  użytkownika i okno słowniczka.
+  użytkownika oraz okna słowniczka i ustawień.
+- `cleanup_prompt.txt` — własny prompt systemowy cleanupu; brak pliku = domyślny
+  prompt z `cleanup.py` (reset w oknie ustawień kasuje plik).
 - `suggestions.json` — stan propozycji słowniczka.
 - `recordings/` — nagrania testowe z `cli.py record`.
 

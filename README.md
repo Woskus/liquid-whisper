@@ -71,10 +71,18 @@ Z terminala: `.venv/bin/python -m liquid_whisper` (tryb bez HUD: `--no-hud`).
 
 ## Konfiguracja
 
-Prywatne ustawienia (hotkey, modele, słowniczek terminów, poprawki) mieszkają **poza
-repozytorium** — w `~/Library/Application Support/LiquidWhisper/config.toml`. Plik
-powstaje przy pierwszym uruchomieniu z szablonu [config.default.toml](config.default.toml).
-Tam też trafiają propozycje słowniczka (`suggestions.json`) i nagrania testowe
+Menu (ikona kropli) → **Ustawienia…** otwiera okienko, w którym zmienisz na żywo
+(bez restartu aplikacji):
+
+- **przycisk nagrywania** — prawy/lewy Ctrl, Option, Command, Shift albo F13–F19,
+- **model cleanup** — lista pokazuje modele zainstalowane w Ollamie,
+- **prompt cleanupu** — pełna treść promptu systemowego (znaczniki `{dictionary}`
+  i `{corrections}` są podmieniane na słowniczek); jeden klik przywraca domyślny.
+
+Prywatne ustawienia mieszkają **poza repozytorium** — w
+`~/Library/Application Support/LiquidWhisper/`: `config.toml` (powstaje przy pierwszym
+uruchomieniu z szablonu [config.default.toml](config.default.toml)), własny prompt
+(`cleanup_prompt.txt`), propozycje słowniczka (`suggestions.json`) i nagrania testowe
 (`recordings/`).
 
 ## Pasek menu i słowniczek
