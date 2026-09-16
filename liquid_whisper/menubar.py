@@ -138,18 +138,6 @@ class SettingsApi:
         return self.get_data()
 
 
-def _activate_app() -> None:
-    """Aplikacja-agent (accessory) nie aktywuje się sama — bez tego okna
-    słowniczka/ustawień otwierałyby się pod spodem i bez fokusu klawiatury."""
-    import Quartz
-
-    def _do():
-        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
-
-    Quartz.CFRunLoopPerformBlock(Quartz.CFRunLoopGetMain(), Quartz.kCFRunLoopCommonModes, _do)
-    Quartz.CFRunLoopWakeUp(Quartz.CFRunLoopGetMain())
-
-
 def open_dictionary_window(app) -> None:
     """Otwiera (lub pokazuje) okienko słowniczka. Wołać spoza wątku głównego."""
     global _dict_window
@@ -158,7 +146,6 @@ def open_dictionary_window(app) -> None:
     if _dict_window is not None:
         try:
             _dict_window.show()
-            _activate_app()
             return
         except Exception:
             _dict_window = None
@@ -172,7 +159,6 @@ def open_dictionary_window(app) -> None:
         js_api=DictApi(app),
     )
     _dict_window = window
-    window.events.shown += _activate_app
 
     def _closed():
         global _dict_window
@@ -189,7 +175,6 @@ def open_settings_window(app) -> None:
     if _settings_window is not None:
         try:
             _settings_window.show()
-            _activate_app()
             return
         except Exception:
             _settings_window = None
@@ -203,7 +188,6 @@ def open_settings_window(app) -> None:
         js_api=SettingsApi(app),
     )
     _settings_window = window
-    window.events.shown += _activate_app
 
     def _closed():
         global _settings_window

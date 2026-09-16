@@ -65,8 +65,6 @@ Jako natywna aplikacja macOS (zalecane — uprawnienia przypięte do aplikacji):
 
 Bundle opakowuje venv projektu, więc po zmianie kodu nie trzeba go przebudowywać
 (tylko po przeniesieniu folderu projektu). Logi: `~/Library/Logs/LiquidWhisper.log`.
-Aplikacja działa jako agent (bez ikony w Docku i ⌘Tab — dzięki temu HUD pokazuje
-się też nad aplikacjami w trybie pełnoekranowym); żyje w pasku menu (ikona kropli).
 Zamykanie: menu → **Zakończ Liquid Whisper** albo `pkill -f "liquid_whisper"`.
 
 Z terminala: `.venv/bin/python -m liquid_whisper` (tryb bez HUD: `--no-hud`).
