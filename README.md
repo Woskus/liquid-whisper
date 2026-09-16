@@ -2,7 +2,9 @@
 
 Lokalny klon Wispr Flow na macOS: przytrzymaj hotkey (prawy Ctrl), powiedz coś po polsku
 (z angielskimi wtrąceniami), puść — oczyszczony tekst wskakuje w aktywne pole tekstowe.
-W trakcie mówienia HUD pokazuje na żywo częściowy transkrypt (streaming).
+W trakcie mówienia częściowy transkrypt wpisuje się na żywo prosto w aktywne pole,
+a po puszczeniu hotkeya koryguje się do wersji oczyszczonej (tryby w [streaming] w config.toml:
+input / hud / off).
 Wszystko działa lokalnie: Whisper large-v3-turbo (mlx-whisper) + mały LLM przez Ollama.
 W trakcie dyktowania na dole ekranu widać liquid-metalowy HUD (React + metal-fx w pywebview).
 

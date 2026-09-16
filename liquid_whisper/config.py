@@ -19,6 +19,7 @@ class Config:
     language: str = "pl"
     cleanup_enabled: bool = True
     cleanup_model: str = "gemma3:4b"
+    streaming_mode: str = "input"  # input | hud | off
     cleanup_min_words: int = 0
     cleanup_timeout_s: float = 10.0
     dictionary: list[str] = field(default_factory=list)
@@ -34,6 +35,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         channels=raw.get("audio", {}).get("channels", 1),
         asr_model=raw.get("asr", {}).get("model", "mlx-community/whisper-large-v3-turbo"),
         language=raw.get("asr", {}).get("language", "pl"),
+        streaming_mode=raw.get("streaming", {}).get("mode", "input"),
         cleanup_enabled=raw.get("cleanup", {}).get("enabled", True),
         cleanup_model=raw.get("cleanup", {}).get("model", "gemma3:4b"),
         cleanup_min_words=raw.get("cleanup", {}).get("min_words", 0),

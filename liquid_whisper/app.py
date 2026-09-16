@@ -13,7 +13,7 @@ from .cleanup import Cleaner
 from .config import Config, load_config
 from .hotkey import HotkeyListener
 from .latency import LatencyReport
-from .paste import paste_text
+from .paste import paste_text, send_backspaces, type_text
 
 log = logging.getLogger("liquid_whisper.app")
 
@@ -84,6 +84,10 @@ class App:
         # (timeout tapa, deadlock evaluate_js) — akcje wykonuje wątek roboczy
         self._actions: queue.Queue[Callable[[], None]] = queue.Queue()
         threading.Thread(target=self._action_worker, daemon=True).start()
+        # streaming na żywo do aktywnego pola
+        self._injected = ""  # tekst aktualnie wpisany w pole przez streaming
+        self._inject_lock = threading.Lock()
+        self._stream_thread: threading.Thread | None = None
 
     def _action_worker(self) -> None:
         while True:
@@ -125,13 +129,15 @@ class App:
             time.sleep(0.08)
 
     def _stream_pump(self) -> None:
-        """Streaming transkrypcji: co ~1 s transkrybuje dotychczasowe audio
-        i pokazuje częściowy tekst w HUD. Finalny wynik i tak liczy się od zera
-        po puszczeniu hotkeya — to tylko podgląd."""
+        """Streaming transkrypcji: co ~1 s transkrybuje dotychczasowe audio.
+        Tryb "input" wpisuje częściowy tekst prosto w aktywne pole (z rewizjami),
+        tryb "hud" pokazuje go w pasku HUD. Finalny wynik i tak liczy się od zera
+        po puszczeniu hotkeya."""
         import time
 
         from .audio import has_speech
 
+        live = self.cfg.streaming_mode == "input"
         min_samples = int(self.cfg.sample_rate * 1.0)
         while self.recorder.recording:
             snap = self.recorder.snapshot()
@@ -141,12 +147,42 @@ class App:
                 except Exception:
                     log.exception("streaming transkrypcji przerwany")
                     return
-                if self.recorder.recording and partial:
-                    try:
-                        self.on_partial(partial)
-                    except Exception:
-                        return
+                if partial:
+                    if live:
+                        self._revise_injected(partial, only_while_recording=True)
+                    elif self.recorder.recording and self.on_partial is not None:
+                        try:
+                            self.on_partial(partial)
+                        except Exception:
+                            return
             time.sleep(0.35)
+
+    def _clear_injected(self) -> None:
+        """Usuwa z pola podgląd wpisany przez streaming (nagranie odrzucone)."""
+        if self._stream_thread is not None:
+            self._stream_thread.join(timeout=3.0)
+            self._stream_thread = None
+        if self._injected:
+            self._revise_injected("")
+            self._injected = ""
+
+    def _revise_injected(self, new_text: str, only_while_recording: bool = False) -> None:
+        """Doprowadza tekst w aktywnym polu do new_text: cofa rozbieżną końcówkę
+        i dopisuje różnicę (wspólny prefiks zostaje nietknięty)."""
+        with self._inject_lock:
+            if only_while_recording and not self.recorder.recording:
+                return  # puszczono hotkey — finalną wersję wpisze _process
+            old = self._injected
+            prefix = 0
+            for a, b in zip(old, new_text):
+                if a != b:
+                    break
+                prefix += 1
+            if len(old) - prefix > 0:
+                send_backspaces(len(old) - prefix)
+            if new_text[prefix:]:
+                type_text(new_text[prefix:])
+            self._injected = new_text
 
     def _press_action(self) -> None:
         try:
@@ -154,10 +190,14 @@ class App:
                 self._pressed = True
                 self.recorder.start()
                 self._set_state("recording")
+                self._injected = ""
                 if self.on_level is not None:
                     threading.Thread(target=self._level_pump, daemon=True).start()
-                if self.on_partial is not None:
-                    threading.Thread(target=self._stream_pump, daemon=True).start()
+                if self.cfg.streaming_mode != "off" and (
+                    self.cfg.streaming_mode == "input" or self.on_partial is not None
+                ):
+                    self._stream_thread = threading.Thread(target=self._stream_pump, daemon=True)
+                    self._stream_thread.start()
         except Exception:
             log.exception("nie udało się rozpocząć nagrywania")
             self._pressed = False
@@ -179,17 +219,20 @@ class App:
             duration = len(audio) / self.cfg.sample_rate
             if duration < MIN_DICTATION_S:
                 log.info("nagranie za krótkie (%.2f s) — ignoruję", duration)
+                self._clear_injected()
                 return
             from .audio import has_speech
 
             if not has_speech(audio, self.cfg.sample_rate):
                 log.info("brak mowy w nagraniu (%.1f s) — ignoruję", duration)
+                self._clear_injected()
                 return
             report = LatencyReport()
             with report.measure("transkrypcja"):
                 text = self.asr.transcribe(audio)
             if not text:
                 log.info("pusty transkrypt — nic nie wklejam")
+                self._clear_injected()
                 return
             log.info("surowy transkrypt: %s", text)
             if self.cleaner is not None:
@@ -204,8 +247,17 @@ class App:
                         self.suggestions.record(extract_pairs(raw, text), self.cfg.corrections)
                     except Exception:
                         log.exception("nie udało się zapisać propozycji słowniczka")
-            with report.measure("wklejenie"):
-                paste_text(text)
+            if self._stream_thread is not None:
+                self._stream_thread.join(timeout=3.0)
+                self._stream_thread = None
+            if self._injected:
+                # streaming już wpisał tekst — tylko korekta do wersji finalnej
+                with report.measure("korekta"):
+                    self._revise_injected(text)
+                    self._injected = ""
+            else:
+                with report.measure("wklejenie"):
+                    paste_text(text)
             report.log_summary()
         except Exception:
             log.exception("błąd przetwarzania dyktanda")
