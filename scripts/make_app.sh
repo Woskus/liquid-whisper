@@ -33,7 +33,9 @@ PLIST
 cat > "$MACOS/liquid-whisper" <<LAUNCHER
 #!/bin/zsh
 cd "$ROOT"
-exec "$ROOT/.venv/bin/python" -m liquid_whisper >> "\$HOME/Library/Logs/LiquidWhisper.log" 2>&1
+# bez exec: python jako proces potomny dziedziczy odpowiedzialność TCC
+# od bundle'a Liquid Whisper — uprawnienia przypinają się do aplikacji
+"$ROOT/.venv/bin/python" -m liquid_whisper >> "\$HOME/Library/Logs/LiquidWhisper.log" 2>&1
 LAUNCHER
 chmod +x "$MACOS/liquid-whisper"
 

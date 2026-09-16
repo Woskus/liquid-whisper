@@ -20,16 +20,28 @@ MIN_DICTATION_S = 0.3
 
 
 def check_permissions() -> bool:
-    from ApplicationServices import AXIsProcessTrusted
+    """Sprawdza Accessibility i Input Monitoring; przy braku prosi systemowym
+    promptem (macOS sam dodaje wtedy aplikację do właściwej listy w ustawieniach)."""
+    import Quartz
+    from ApplicationServices import AXIsProcessTrusted, AXIsProcessTrustedWithOptions
 
-    trusted = bool(AXIsProcessTrusted())
-    if not trusted:
+    ax = bool(AXIsProcessTrusted())
+    if not ax:
+        AXIsProcessTrustedWithOptions({"AXTrustedCheckOptionPrompt": True})
         log.warning(
-            "Brak uprawnień Accessibility — hotkey i ⌘V nie zadziałają. "
-            "System Settings → Privacy & Security → Accessibility (i Input Monitoring): "
-            "dodaj Liquid Whisper.app albo aplikację terminala, z której startujesz."
+            "Brak uprawnień Accessibility (wklejanie ⌘V) — zatwierdź systemowy monit "
+            "albo włącz ręcznie: System Settings → Privacy & Security → Accessibility."
         )
-    return trusted
+    im = bool(Quartz.CGPreflightListenEventAccess())
+    if not im:
+        Quartz.CGRequestListenEventAccess()
+        log.warning(
+            "Brak uprawnień Input Monitoring (nasłuch hotkeya) — zatwierdź monit "
+            "albo włącz ręcznie: System Settings → Privacy & Security → Input Monitoring."
+        )
+    if not (ax and im):
+        log.warning("po nadaniu uprawnień uruchom aplikację ponownie")
+    return ax and im
 
 
 class App:
