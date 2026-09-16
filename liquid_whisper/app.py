@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import queue
 import threading
 from collections.abc import Callable
 
@@ -67,12 +68,30 @@ class App:
         )
         self.listener = HotkeyListener(cfg.hotkey, self._on_press, self._on_release)
         self._pressed = False
+        # callback tapa działa na głównym wątku i musi wracać natychmiast
+        # (timeout tapa, deadlock evaluate_js) — akcje wykonuje wątek roboczy
+        self._actions: queue.Queue[Callable[[], None]] = queue.Queue()
+        threading.Thread(target=self._action_worker, daemon=True).start()
+
+    def _action_worker(self) -> None:
+        while True:
+            action = self._actions.get()
+            try:
+                action()
+            except Exception:
+                log.exception("błąd akcji hotkeya")
 
     def _set_state(self, state: str) -> None:
         log.info("stan: %s", state)
         self.on_state(state)
 
     def _on_press(self) -> None:
+        self._actions.put(self._press_action)
+
+    def _on_release(self) -> None:
+        self._actions.put(self._release_action)
+
+    def _press_action(self) -> None:
         try:
             if not self._pressed:
                 self._pressed = True
@@ -83,7 +102,7 @@ class App:
             self._pressed = False
             self._set_state("idle")
 
-    def _on_release(self) -> None:
+    def _release_action(self) -> None:
         try:
             if self._pressed:
                 self._pressed = False
@@ -99,6 +118,11 @@ class App:
             duration = len(audio) / self.cfg.sample_rate
             if duration < MIN_DICTATION_S:
                 log.info("nagranie za krótkie (%.2f s) — ignoruję", duration)
+                return
+            from .audio import has_speech
+
+            if not has_speech(audio, self.cfg.sample_rate):
+                log.info("brak mowy w nagraniu (%.1f s) — ignoruję", duration)
                 return
             report = LatencyReport()
             with report.measure("transkrypcja"):

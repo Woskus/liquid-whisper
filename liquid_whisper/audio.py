@@ -67,6 +67,24 @@ class Recorder:
         return self._stream is not None
 
 
+def has_speech(audio: np.ndarray, sample_rate: int = 16000, min_active_ratio: float = 0.04) -> bool:
+    """Prosta bramka energetyczna: czy nagranie zawiera mowę, czy sam szum tła.
+
+    Porównuje energię ramek 30 ms z adaptacyjnym poziomem szumu (10. percentyl),
+    więc działa niezależnie od głośności mikrofonu. Chroni przed halucynacjami
+    Whispera na ciszy („Dziękuję za oglądanie" itp.).
+    """
+    frame = int(sample_rate * 0.03)
+    if len(audio) < frame * 5:
+        return False
+    frames = audio[: len(audio) // frame * frame].reshape(-1, frame)
+    rms = np.sqrt((frames**2).mean(axis=1))
+    noise_floor = float(np.percentile(rms, 10)) + 1e-6
+    threshold = max(4.0 * noise_floor, 0.003)
+    active_ratio = float((rms > threshold).mean())
+    return active_ratio >= min_active_ratio
+
+
 def record_seconds(seconds: float, sample_rate: int = 16000) -> np.ndarray:
     """Proste nagranie o stałej długości (do testów etapu 1)."""
     audio = sd.rec(

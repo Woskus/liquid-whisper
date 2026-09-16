@@ -35,4 +35,12 @@ class Transcriber:
             language=self.language,
             fp16=True,
         )
+        segments = result.get("segments") or []
+        if segments:
+            # cisza/oddech: Whisper halucynuje frazy typu "Dziękuję za oglądanie"
+            kept = [s["text"] for s in segments if s.get("no_speech_prob", 0.0) < 0.6]
+            dropped = len(segments) - len(kept)
+            if dropped:
+                log.info("odrzucono %d segment(y) bez mowy", dropped)
+            return " ".join(t.strip() for t in kept).strip()
         return str(result["text"]).strip()
