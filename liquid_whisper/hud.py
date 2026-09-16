@@ -18,9 +18,9 @@ log = logging.getLogger("liquid_whisper.hud")
 
 DIST_INDEX = Path(__file__).resolve().parent.parent / "hud" / "dist" / "index.html"
 
-WINDOW_W = 500
-WINDOW_H = 104
-MARGIN_BOTTOM = 44
+WINDOW_W = 180
+WINDOW_H = 70
+MARGIN_BOTTOM = 52
 
 
 class Hud:
@@ -56,14 +56,6 @@ class Hud:
         except Exception:
             pass  # wizualizacja poziomu jest kosmetyczna — nie zaśmiecamy loga
 
-    def set_partial(self, text: str) -> None:
-        import json
-
-        try:
-            self.window.evaluate_js(f"window.setHudText && window.setHudText({json.dumps(text)})")
-        except Exception:
-            pass
-
     def make_click_through(self) -> None:
         """Okno HUD nie może łapać myszy ani kraść fokusu — dyktujemy do innej aplikacji."""
         try:
@@ -79,7 +71,7 @@ def run_with_hud(cfg: Config) -> None:
     import Quartz
 
     hud = Hud()
-    app = App(cfg, on_state=hud.set_state, on_level=hud.set_level, on_partial=hud.set_partial)
+    app = App(cfg, on_state=hud.set_state, on_level=hud.set_level)
 
     def backend() -> None:
         hud.make_click_through()

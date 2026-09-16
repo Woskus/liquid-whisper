@@ -7,12 +7,9 @@ const BAR_SHAPE = [0.55, 0.85, 1.0, 0.85, 0.55]
 const BAR_MIN = 3
 const BAR_MAX = 18
 
-const TEXT_TAIL = 70 // pokazujemy końcówkę — najświeższe słowa
-
 export default function App() {
   const [state, setState] = useState('idle')
   const [level, setLevel] = useState(0)
-  const [text, setText] = useState('')
   const smooth = useRef(0)
 
   useEffect(() => {
@@ -22,16 +19,10 @@ export default function App() {
       smooth.current = smooth.current * 0.5 + l * 0.5
       setLevel(smooth.current)
     }
-    window.setHudText = (t) => setText(t)
-    return () => { delete window.setHudState; delete window.setHudLevel; delete window.setHudText }
+    return () => { delete window.setHudState; delete window.setHudLevel }
   }, [])
 
-  useEffect(() => {
-    if (state === 'idle') setText('')
-  }, [state])
-
   const visible = state === 'recording' || state === 'processing'
-  const tail = text.length > TEXT_TAIL ? '…' + text.slice(-TEXT_TAIL) : text
 
   return (
     <div className={`hud-root ${visible ? 'visible' : 'hidden'}`}>
@@ -54,7 +45,6 @@ export default function App() {
           ))}
         </div>
       </MetalFx>
-      {visible && tail && <div className="hud-text">{tail}</div>}
     </div>
   )
 }

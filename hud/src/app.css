@@ -2,24 +2,9 @@
   width: 100vw;
   height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   transition: opacity 0.18s ease;
-}
-
-.hud-text {
-  max-width: 460px;
-  padding: 4px 14px;
-  border-radius: 12px;
-  background: rgba(12, 12, 16, 0.78);
-  color: rgba(236, 238, 242, 0.92);
-  font: 12px/1.4 -apple-system, 'SF Pro Text', sans-serif;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .hud-root.hidden { opacity: 0; }

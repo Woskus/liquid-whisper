@@ -20,7 +20,7 @@ class Transcriber:
     ) -> None:
         self.model = model
         self.language = language
-        # streaming i finalna transkrypcja mogą się zazębić — jedna naraz
+        # transkrypcje z różnych wątków nie mogą się zazębiać — jedna naraz
         self._lock = threading.Lock()
 
     def warmup(self) -> None:
